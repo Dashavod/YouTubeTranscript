@@ -95,6 +95,7 @@ def main():
                                 data = col3.text_area("Text:", value=get_translation_from_file(url, file_extension),
                                                       height=350)
                         else:
+                            col3.markdown("## Output")
                             # Transcribe checkbox
                             col3.info(
                                 """
@@ -103,7 +104,7 @@ def main():
                                 """
                             )
 
-                            col3.markdown("## Output")
+
 
                             # Transcribe
                             with st.spinner("Transcribing audio..."):
