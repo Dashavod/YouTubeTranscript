@@ -33,8 +33,9 @@ def main():
     # Title: Input data
     col1.markdown("## Input data")
 
-    url = col1.text_input('YouTube URL:')
-    uploaded_file = col1.file_uploader("Завантажте відео", type=["mp4", "avi", "mov"])
+    url = col1.text_input('YouTube video or playlist URL:')
+    uploaded_file = st.file_uploader("Upload Video or audio", type=["mp4", "avi", "mov", "mp3"])
+
 
     if uploaded_file:
         with tempfile.NamedTemporaryFile(delete=False) as temp_video:
@@ -67,8 +68,8 @@ def main():
 
                     language = col2.selectbox('Please select the language', get_languages_auto_transcript_text(url))
 
-                originate_language = col2.selectbox('Original language', ['uk', 'ru'])
-                translate_cb = col2.checkbox("Translate text")
+                # originate_language = col2.selectbox('Original language', ['uk', 'ru'])
+                # translate_cb = col2.checkbox("Translate text")
 
                 # Transcribe checkbox
                 transcribe_cb = col2.checkbox("Transcribe")
@@ -83,67 +84,65 @@ def main():
                         data = col3.text_area("Text:", value=data, height=350)
                         save_transcribe_result(url, auto_transcript=transcript)
                     else:
-                        if is_translation_available(url):
-                            col3.info("This video have been already translated")
-                            file_extension = col3.selectbox("File extension:", options=["TXT (.txt)", "SubRip (.srt)"])
-                            if translate_cb:
-                                with st.spinner("Translating text🤓"):
-                                    data = translated_text = translate_text(
-                                        get_translation_from_file(url, file_extension), originate_language)
-                                    data = st.text_area("Text:", value=translated_text, height=350)
-                            else:
-                                data = col3.text_area("Text:", value=get_translation_from_file(url, file_extension),
-                                                      height=350)
-                        else:
-                            col3.markdown("## Output")
-                            # Transcribe checkbox
-                            col3.info(
-                                """
-                                If the transcription process takes just a few seconds, this means that the output was cached.
-                                You can try again with another sample or a custom YouTube URL!
-                                """
-                            )
+                        # if is_translation_available(url):
+                        #     col3.info("This video have been already translated")
+                        #     file_extension = col3.selectbox("File extension:", options=["TXT (.txt)", "SubRip (.srt)"])
+                        #     # if translate_cb:
+                        #     #     with st.spinner("Translating text🤓"):
+                        #     #         data = translated_text = translate_text(
+                        #     #             get_translation_from_file(url, file_extension), originate_language)
+                        #     #         data = st.text_area("Text:", value=translated_text, height=350)
+                        #     # else:
+                        #     #     data = col3.text_area("Text:", value=get_translation_from_file(url, file_extension),
+                        #     #                           height=350)
+                        # else:
+                        #     col3.markdown("## Output")
+                        #     # Transcribe checkbox
+                        #     col3.info(
+                        #         """
+                        #         If the transcription process takes just a few seconds, this means that the output was cached.
+                        #         You can try again with another sample or a custom YouTube URL!
+                        #         """
+                        #     )
 
-
-
-                            # Transcribe
-                            with st.spinner("Transcribing audio..."):
+                        # Transcribe
+                        with st.spinner("Transcribing audio..."):
+                            result = None
+                            try:
+                                result = transcribe_youtube_video(model, url, language)
+                            except RuntimeError:
                                 result = None
-                                try:
-                                    result = transcribe_youtube_video(model, url, language)
-                                except RuntimeError:
-                                    result = None
-                                    col3.warning(
-                                        """
-                                        Oops! Someone else is using the model right now to transcribe another video. 
-                                        Please try again in a few seconds.
-                                        """
-                                    )
+                                col3.warning(
+                                    """
+                                    Oops! Someone else is using the model right now to transcribe another video. 
+                                    Please try again in a few seconds.
+                                    """
+                                )
 
-                            if result:
-                                # Print detected language
-                                col3.success("Detected language: {}".format(result['language']))
-                                save_transcribe_result(url, result)
+                        if result:
+                            # Print detected language
+                            col3.success("Detected language: {}".format(result['language']))
+                            save_transcribe_result(url, result)
 
-                                # Select output file extension and get data
-                                file_extension = col3.selectbox("File extension:",
-                                                                options=["TXT (.txt)", "SubRip (.srt)"])
-                                if file_extension == "TXT (.txt)":
-                                    file_extension = "txt"
-                                    data = result['text'].strip()
-                                elif file_extension == "SubRip (.srt)":
-                                    file_extension = "srt"
-                                    data = result['srt']
+                            # Select output file extension and get data
+                            file_extension = col3.selectbox("File extension:",
+                                                            options=["TXT (.txt)", "SubRip (.srt)"])
+                            if file_extension == "TXT (.txt)":
+                                file_extension = "txt"
+                                data = result['text'].strip()
+                            elif file_extension == "SubRip (.srt)":
+                                file_extension = "srt"
+                                data = result['srt']
 
-                                    # Print output
-                                if translate_cb:
-                                    with st.spinner("Translating text🤓"):
-                                        data = translated_text = translate_text(data, originate_language)
-                                        data = st.text_area("Text:", value=translated_text, height=350)
-                                else:
-                                    data = col3.text_area("Text:", value=data, height=350)
+                            #     # Print output
+                            # if translate_cb:
+                            #     with st.spinner("Translating text🤓"):
+                            #         data = translated_text = translate_text(data, originate_language)
+                            #         data = st.text_area("Text:", value=translated_text, height=350)
+                            # else:
+                            data = col3.text_area("Text:", value=data, height=350)
 
-                                # Download data
+                            # Download data
                     _, button1, button2 = col3.columns([2, 1, 1], gap='small')
                     button1.download_button("Download", data=data, use_container_width=True,
                                             file_name="captions.{}".format(file_extension))

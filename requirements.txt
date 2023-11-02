@@ -66,5 +66,9 @@ watchdog==2.1.9
 websockets==10.4
 whisper @ git+https://github.com/openai/whisper.git@9e653bd0ea0f1e9493cb4939733e9de249493cfb
 yt-dlp==2022.11.11
-yt-whisper @ git+https://github.com/m1guelpf/yt-whisper.git@0190e7e3cdafb015b1325e30e80e558af7d7c57f
 zipp==3.10.0
+youtube_transcript_api==0.6.1
+streamlit_extras==0.3.4
+langchain==0.0.325
+python-dotenv==1.0.0
+openai==0.28.1

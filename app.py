@@ -19,13 +19,13 @@ st.set_page_config(
 
 # st.image(main_image,use_column_width='auto')
 st.title("✨ Automatic YouTube subtitle generation 🔊")
-col1, col2, col3 = st.columns([0.3, 0.2, 0.3],gap="large")
+col1, col2, col3 = st.columns([0.3, 0.2, 0.3], gap="large")
 with col1:
     st.markdown("#### Input data")
 
-    url = st.text_input('YouTube URL:')
+    url = st.text_input('YouTube video or playlist URL:')
     st.markdown("#### Input data")
-    uploaded_file = st.file_uploader("Завантажте відео", type=["mp4", "avi", "mov"])
+    uploaded_file = st.file_uploader("Upload Video or audio", type=["mp4", "avi", "mov", "mp3"])
 
     if uploaded_file:
         # Створюємо тимчасовий файл для завантаженого відео
@@ -42,9 +42,9 @@ with col1:
     pass
 with col2:
     st.markdown("#### Input data")
-    model_type = st.radio("Please choose your model type", ('Small', 'Medium', 'Large'),horizontal=True)
+    model_type = st.radio("Please choose your model type", ('Small', 'Medium', 'Large'), horizontal=True)
     st.markdown("#### Input data")
-    task_type = st.radio("Please choose your task type", ('Transcribe', 'Translate'),horizontal=True)
+    task_type = st.radio("Please choose your task type", ('Transcribe', 'Translate'), horizontal=True)
 with col3:
     st.markdown("#### Input data")
     format_type = st.radio("Please choose your output format type", ('TXT', 'SRT'), horizontal=True)
