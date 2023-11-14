@@ -106,17 +106,17 @@ if transcribe_cb:
         elif st.session_state.playlist_url:
 
             st.markdown(f"Playlist consist of {len(st.session_state.playlist_links)}")
-
-            try:
-                filename = playlist_transcript_arc(st.session_state.playlist_url,st.session_state.language)
-            except:
-                filename = None
-                st.warning(
-                    """
-                    Oops! Someone else is using the model right now to transcribe another video. 
-                    Please try again in a few seconds.
-                    """
-                )
+            with st.spinner("Transcribing playlist..."):
+                try:
+                    filename = playlist_transcript_arc(st.session_state.playlist_url,st.session_state.language)
+                except:
+                    filename = None
+                    st.warning(
+                        """
+                        Oops! Someone else is using the model right now to transcribe another video. 
+                        Please try again in a few seconds.
+                        """
+                    )
 
 
             st.markdown(f"Transcribed videos {filename}")
@@ -130,7 +130,7 @@ if transcribe_cb:
 
 
     elif transcribe_method == 'Whisper':
-        if st.session_state.playlist_links:
+        if st.session_state.playlist_url:
             st.error('Sorry currenty service doen`t work with playlist with playlist, please choose Autosubtitles', icon="🚨")
         else:
             with st.spinner("Transcribing audio..."):

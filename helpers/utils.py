@@ -78,25 +78,27 @@ import os
 import zipfile
 
 
-@st.cache_data(show_spinner=True, max_entries=1)
+
 def playlist_transcript_arc(playlist,language):
     links = get_youtube_playlist_links(playlist)
 
     title, author, metadata, filename = get_youtube_video_info(links[0])
-    if os.path.isfile(f'zipfiles/playlist_{author + title}.zip'):
+    if os.path.isfile(f'zipfiles/playlist_{author}.zip'):
         print("exist")
-        return f'zipfiles/playlist_{author + title}.zip'
+        return f'zipfiles/playlist_{author}.zip'
 
     print("start playlist transcript")
     for url in links:
-        if not is_translation_available(url):
-            try:
+        print(is_translation_available(url))
+
+        try:
+            if not is_translation_available(url):
                 transcript = get_auto_transcript_text(url, language)
                 save_transcribe_result(url, auto_transcript=transcript)
-            except:
-                print(f"Someting go wrong with {url}")
+        except:
+            print(f"Someting go wrong with {url}")
     path_to_dir = f'output/{author}'
-    output_filename = f'zipfiles/playlist_{author + title}'
+    output_filename = f'zipfiles/playlist_{author}'
 
     shutil.make_archive(output_filename, 'zip', f'output/{author}')
     print("zip created")
