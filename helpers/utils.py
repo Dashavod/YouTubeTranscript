@@ -1,16 +1,13 @@
 import os
 import re
 
-import sys
-
-from pytube import YouTube
-from pytube import extract
 import streamlit as st
 import whisper
 import torch
-from youtube_transcript_api.formatters import SRTFormatter,TextFormatter
-srt_formatter = SRTFormatter()
-txt_formatter =TextFormatter()
+import shutil
+
+from helpers.youtube_utils import get_youtube_video_info, txt_formatter, srt_formatter, _get_audio_from_youtube_url, \
+    get_auto_transcript_text, get_youtube_playlist_links
 
 SAMPLES = {
     "DALL·E 2 Explained by OpenAI": "https://www.youtube.com/watch?v=qTgPSKKjfVg",
@@ -20,60 +17,6 @@ SAMPLES = {
 MAX_VIDEO_LENGTH = 240 * 60
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-from youtube_transcript_api import (
-    YouTubeTranscriptApi, YouTubeRequestFailed, VideoUnavailable, InvalidVideoId, TooManyRequests,
-    TranscriptsDisabled, NoTranscriptAvailable, NotTranslatable, TranslationLanguageNotAvailable,
-    CookiePathInvalid, CookiesInvalid, FailedToCreateConsentCookie, NoTranscriptFound
-)
-
-
-def extract_video_id_from_url(url):
-    try:
-        return extract.video_id(url)
-    except Exception:
-        st.error("Please provide a valid YouTube URL.")
-        st.stop()
-
-
-def get_languages_auto_transcript_text(url):
-    transcript_list = YouTubeTranscriptApi.list_transcripts(extract_video_id_from_url(url))
-    language_codes = set()
-    # iterate over all available transcripts
-    for transcript in transcript_list:
-        # the Transcript object provides metadata properties
-
-        transcript.video_id,
-        language_codes.add(transcript.language_code)
-
-    return language_codes
-
-
-def get_auto_transcript_text(url, language_code: str = 'en'):
-    video_id = extract_video_id_from_url(url)
-    try:
-        transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[language_code], preserve_formatting=True)
-        return transcript
-    except (
-            YouTubeRequestFailed, VideoUnavailable, InvalidVideoId, TooManyRequests, NoTranscriptAvailable,
-            NotTranslatable,
-            TranslationLanguageNotAvailable, CookiePathInvalid, CookiesInvalid, FailedToCreateConsentCookie):
-        st.error("An error occurred while fetching the transcript. Please try another video.")
-        st.stop()
-    except TranscriptsDisabled:
-        st.error("Subtitles are disabled for this video. Please try another video.")
-        st.stop()
-    except NoTranscriptFound:
-        st.error(
-            "The video doesn't have English subtitles. Please ensure the video you're selecting is in English or has English subtitles available.")
-        st.stop()
-    except Exception as e:
-        st.error(f"An unexpected error occurred: {str(e)}. Please try again.")
-        st.stop()
-
-
-def sample_to_url(option):
-    return SAMPLES.get(option)
 
 
 @st.cache_resource(show_spinner=False)
@@ -89,25 +32,12 @@ def valid_url(url):
     return re.search(r'((http(s)?:\/\/)?)(www\.)?((youtube\.com\/)|(youtu.be\/))[\S]+', url)
 
 
-def get_video_duration_from_youtube_url(url):
-    yt = YouTube(url)
-    return yt.length
-
-
-def is_subitles_available(url):
-    yt = YouTube(url)
-    caption = yt.captions
-    # caption.xml_captions
-    # srt_format = caption.xml_caption_to_srt(caption.xml_captions)
-    print(caption)
-    return caption
-
-
 def is_translation_available(url):
     title, author, metadata, filename = get_youtube_video_info(url)
 
     return os.path.exists(f'output/{author}/{clean_filename(filename)}.txt') or os.path.exists(
         f'output/{author}/{clean_filename(filename)}.srt')
+
 
 
 def get_translation_from_file(url, extension):
@@ -123,13 +53,6 @@ def get_translation_from_file(url, extension):
     except FileNotFoundError:
         # Handle the case where the file doesn't exist
         return None
-
-
-def _get_audio_from_youtube_url(url):
-    yt = YouTube(url)
-    if not os.path.exists('../data'):
-        os.makedirs('../data')
-    yt.streams.filter(only_audio=True).first().download(filename=os.path.join('../data', 'audio.mp3'))
 
 
 def _whisper_result_to_srt(result):
@@ -151,6 +74,34 @@ def _whisper_result_to_srt(result):
 
     return "\n".join(text)
 
+import os
+import zipfile
+
+
+@st.cache_data(show_spinner=True, max_entries=1)
+def playlist_transcript_arc(playlist,language):
+    links = get_youtube_playlist_links(playlist)
+
+    title, author, metadata, filename = get_youtube_video_info(links[0])
+    if os.path.isfile(f'zipfiles/playlist_{author + title}.zip'):
+        print("exist")
+        return f'zipfiles/playlist_{author + title}.zip'
+
+    print("start playlist transcript")
+    for url in links:
+        if not is_translation_available(url):
+            try:
+                transcript = get_auto_transcript_text(url, language)
+                save_transcribe_result(url, auto_transcript=transcript)
+            except:
+                print(f"Someting go wrong with {url}")
+    path_to_dir = f'output/{author}'
+    output_filename = f'zipfiles/playlist_{author + title}'
+
+    shutil.make_archive(output_filename, 'zip', f'output/{author}')
+    print("zip created")
+    return output_filename
+
 
 def clean_filename(filename):
     # Define a set of allowed characters (letters, numbers, underscores, and hyphens)
@@ -160,17 +111,6 @@ def clean_filename(filename):
     cleaned_filename = ''.join(c if c in allowed_characters else '_' for c in filename)
 
     return cleaned_filename
-
-
-def get_youtube_video_info(url):
-    yt = YouTube(url)
-    title = yt.title
-    author = yt.author
-    metadata = yt.metadata
-    desc = yt.description
-    print('desc: ', desc)
-    filename = f"{title}_{metadata}"
-    return title, author, metadata, filename
 
 
 def save_transcribe_result(url, result=None, auto_transcript=''):

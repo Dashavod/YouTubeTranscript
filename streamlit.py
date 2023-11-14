@@ -4,6 +4,8 @@ from whisper.tokenizer import LANGUAGES
 import tempfile
 import ffmpeg
 
+from helpers.youtube_utils import *
+
 
 def main():
     # Streamlit config
@@ -51,7 +53,7 @@ def main():
 
     if url:
         # Check if the input url is a valid YouTube url
-        right_url = valid_url(url)
+        right_url = check_youtube_url(url)
         col1.video(url)
         if right_url:
             if get_video_duration_from_youtube_url(url) <= MAX_VIDEO_LENGTH:

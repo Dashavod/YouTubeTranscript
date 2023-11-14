@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
-url = st.session_state.url
+url = st.session_state.video_url
 st.info(url)
 print('url:', url)
 
@@ -42,11 +42,14 @@ col2.title("✍ Generated Question")
 col2.divider()
 if analyse_cb:
     with st.spinner("Crafting your questions...🤓"):
-        quiz_data_str = get_openai_data(data)
-        st.session_state.quiz_data_list = string_to_list(quiz_data_str)
-        for q in st.session_state.quiz_data_list:
-            col2.info(q)
-
+        try:
+            quiz_data_str = get_openai_data(data)
+            st.session_state.quiz_data_list = string_to_list(quiz_data_str)
+            for q in st.session_state.quiz_data_list:
+                col2.info(q)
+        except:
+            st.error('An error occurred: This model maximum context length is 4097', icon="🚨")
+            st.stop()
 # Check if user is new or returning using session state.
 # If user is new, show the toast message.
 # if 'first_time' not in st.session_state:
