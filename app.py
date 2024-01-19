@@ -8,7 +8,8 @@ import ffmpeg
 from PIL import Image
 from whisper.tokenizer import LANGUAGES
 from streamlit_extras.switch_page_button import switch_page
-from helpers.utils import load_whisper_model, save_transcribe_result, transcribe_youtube_video, playlist_transcript_arc
+from helpers.utils import load_whisper_model, save_transcribe_result, transcribe_youtube_video, playlist_transcript_arc, \
+    transcribe_upload_video
 from helpers.youtube_utils import *
 
 st.set_page_config(
@@ -52,20 +53,24 @@ else:
     st.error('Incorrect url, paste a new one', icon="🚨")
 print('url:', url)
 
-# uploaded_file = st.file_uploader("Upload Video or audio", type=["mp4", "avi", "mov", "mp3"], accept_multiple_files=False)
-#
-# if uploaded_file:
-#     # Створюємо тимчасовий файл для завантаженого відео
-#     with tempfile.NamedTemporaryFile(delete=False) as temp_video:
-#         temp_video.write(uploaded_file.read())
-#
-#     # Витягнути аудіо з відео та зберегти його
-#     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
-#         ffmpeg.input(temp_video.name).output(temp_audio.name, y='-y').run()
-#
-#     # Показати завантажений відео та витягнутий аудіо
-#     st.video(temp_video.name, format="video/mp4")
-#     st.audio(temp_audio.name, format="audio/mp3")
+uploaded_file = st.file_uploader("Upload Video or audio", type=["mp4", "avi", "mov", "mp3"], accept_multiple_files=False)
+
+if uploaded_file:
+
+    # Створюємо тимчасовий файл для завантаженого відео
+    with tempfile.NamedTemporaryFile(delete=False) as temp_video:
+        temp_video.write(uploaded_file.read())
+
+    # Витягнути аудіо з відео та зберегти його
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
+        ffmpeg.input(temp_video.name).output(temp_audio.name, y='-y').run()
+    print(temp_audio.name)
+
+    st.session_state.upload_resourse = temp_audio.name
+    # Показати завантажений відео та витягнутий аудіо
+    st.video(temp_video.name, format="video/mp4")
+    st.audio(temp_audio.name, format="audio/mp3")
+
 
 ## Check if files already translated
 
@@ -130,16 +135,21 @@ if transcribe_cb:
 
 
     elif transcribe_method == 'Whisper':
-        if st.session_state.playlist_url:
+        if st.session_state.get("playlist_url"):
             st.error('Sorry currenty service doen`t work with playlist with playlist, please choose Autosubtitles', icon="🚨")
         else:
             with st.spinner("Transcribing audio..."):
 
                 try:
-                    result = transcribe_youtube_video(model, url, language)
+                    if  st.session_state.get("upload_resourse"):
+                        result = transcribe_upload_video(model, st.session_state.get("upload_resourse"),language)
+                        save_transcribe_result(st.session_state.get("upload_resourse"), result, isUpload=True)
+                    elif st.session_state.get("video_url"):
+                        result = transcribe_youtube_video(model, url, language)
+                        save_transcribe_result(url, result)
                     st.success("Detected language: {}".format(result['language']))
 
-                    save_transcribe_result(url, result)
+
                 except RuntimeError:
                     result = None
                     st.warning(

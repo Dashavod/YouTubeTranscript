@@ -115,9 +115,20 @@ def clean_filename(filename):
     return cleaned_filename
 
 
-def save_transcribe_result(url, result=None, auto_transcript=''):
-    title, author, metadata, filename = get_youtube_video_info(url)
+def save_transcribe_result(url, result=None, auto_transcript='',isUpload=False):
 
+    if isUpload:
+        if not os.path.exists('output/upload'):
+            os.makedirs('output/upload')
+        print(url[-15:-4])
+        txtFile = open(f'output/upload/{clean_filename(url[-15:-4])}.txt', mode="w", encoding="utf-8")
+        txtFile.write(result['text'])
+        srtFile = open(f'output/upload/{clean_filename(url[-15:-4])}.srt', mode="w", encoding="utf-8")
+        srtFile.write(result['srt'])
+
+        return "Result save in .txt and .srt format"
+
+    title, author, metadata, filename = get_youtube_video_info(url)
     if not os.path.exists(f'output/{author}'):
         os.makedirs(f'output/{author}')
     if result:
@@ -142,5 +153,13 @@ def transcribe_youtube_video(_model, url,language='en'):
 
     options = whisper.DecodingOptions(fp16=False, language=language)
     result = _model.transcribe(os.path.join('../data', 'audio.mp3'), **options.__dict__)
+    result['srt'] = _whisper_result_to_srt(result)
+    return result
+
+@st.cache_data(show_spinner=False, max_entries=1)
+def transcribe_upload_video(_model, path ,language='en'):
+
+    options = whisper.DecodingOptions(fp16=False, language=language)
+    result = _model.transcribe(path, **options.__dict__)
     result['srt'] = _whisper_result_to_srt(result)
     return result

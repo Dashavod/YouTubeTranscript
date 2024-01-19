@@ -121,6 +121,7 @@ venv.bak/
 /site
 output/
 data/
+zipfiles/
 # mypy
 .mypy_cache/
 .dmypy.json
